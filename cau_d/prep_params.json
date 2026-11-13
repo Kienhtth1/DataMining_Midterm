@@ -1,0 +1,50 @@
+{
+  "dropped": [
+    "customer_id",
+    "total_spend_12m",
+    "annual_income_was_missing",
+    "gender",
+    "preferred_category"
+  ],
+  "transforms": {
+    "age": "none",
+    "tenure_months": "none",
+    "annual_income": "log10",
+    "orders_12m": "log10",
+    "avg_order_value": "log10",
+    "recency_days": "log1p",
+    "discount_usage_rate": "none",
+    "return_rate": "log10",
+    "avg_session_minutes": "none"
+  },
+  "scaler": "standard (fit 194 khách thường)",
+  "center": {
+    "age": 32.917526,
+    "tenure_months": 26.412371,
+    "annual_income": 2.416808,
+    "orders_12m": 0.895872,
+    "avg_order_value": 5.678961,
+    "recency_days": 3.042009,
+    "discount_usage_rate": 0.471392,
+    "return_rate": -1.005191,
+    "avg_session_minutes": 34.706728,
+    "city_tier": 1.92268
+  },
+  "scale": {
+    "age": 7.695453,
+    "tenure_months": 15.982434,
+    "annual_income": 0.200095,
+    "orders_12m": 0.489611,
+    "avg_order_value": 0.307642,
+    "recency_days": 1.641362,
+    "discount_usage_rate": 0.277853,
+    "return_rate": 0.389235,
+    "avg_session_minutes": 21.831395,
+    "city_tier": 0.805395
+  },
+  "onehot_weights": {
+    "payment_method": 1.1663046824290824
+  },
+  "pca_components": 2,
+  "pca_explained": 0.5331
+}

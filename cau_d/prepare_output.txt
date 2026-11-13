@@ -1,0 +1,161 @@
+
+====================================================================================================
+D1. CHỌN THUỘC TÍNH
+====================================================================================================
+Bỏ customer_id: định danh, không mang thông tin hành vi.
+Bỏ total_spend_12m: Câu b - log(total) = log(orders) + log(AOV) với R² = 0.997, VIF = 388;
+   giữ log(orders) và log(AOV) giữ được cả 'mức chi tiêu' lẫn 'phong cách mua' (nhiều đơn rẻ / ít đơn đắt).
+   Kiểm tra lại trên 04: R² = 0.9994
+Bỏ annual_income_was_missing: là đặc điểm của quá trình thu thập dữ liệu, không phải hành vi;
+   lại tương quan với tuổi (r = -0.21, p = 0.0033) -> đưa vào sẽ tạo trục phân cụm giả theo 'ai không khai thu nhập'.
+
+Thuộc tính phân loại: giữ nếu liên quan ý nghĩa đến ≥ 1 thuộc tính số (Kruskal-Wallis, Bonferroni trên 9 phép thử mỗi thuộc tính, α = 0.05). Thuộc tính không liên quan hành vi chỉ thêm chiều nhiễu.
+                    n_ý_nghĩa  p_bonf_min  eps2_max    giữ
+cat                                                       
+gender                      0      1.0000    0.0052  False
+preferred_category          0      0.0691    0.0507  False
+payment_method              8      0.0000    0.1891   True
+city_tier                   2      0.0029    0.0716   True
+-> Giữ định danh: ['payment_method']; thứ bậc: ['city_tier']; bỏ: ['gender', 'preferred_category']
+Cramér's V giữa các thuộc tính định danh (không có cặp nào trùng lặp mạnh): {'gender-preferred_category': 0.118, 'gender-payment_method': 0.124, 'payment_method-preferred_category': 0.143}
+
+====================================================================================================
+D2. BIẾN ĐỔI PHÂN BỐ (chỉ khi |skew| > 1; chọn biến đổi làm |skew| nhỏ nhất)
+====================================================================================================
+                     skew_none  skew_sqrt  skew_log1p  skew_log10   chọn
+thuộc_tính                                                              
+age                       0.15      -0.17       -0.46       -0.48   none
+tenure_months             0.52      -0.26       -1.21       -1.58   none
+annual_income             5.04       3.42        1.51        1.50  log10
+orders_12m                4.99       2.41        0.36        0.08  log10
+avg_order_value           3.17       1.60        0.66        0.66  log10
+recency_days              2.00       1.14        0.04         NaN  log1p
+discount_usage_rate       0.27      -0.40        0.03         NaN   none
+return_rate               1.41       0.72        1.23       -0.24  log10
+avg_session_minutes       0.41      -0.12       -0.96       -1.36   none
+
+====================================================================================================
+D4. CHUẨN HÓA: StandardScaler (mean/std) hay RobustScaler (median/IQR)?
+====================================================================================================
+Nhóm cực đoan (orders_12m > 50.5, giữ lại theo Câu c): 6 bản ghi
+                     std (đủ)  std (bỏ cực đoan)  IQR (đủ)  IQR (bỏ cực đoan)  Δstd %  ΔIQR %
+age                     7.936              7.715    11.250             11.000   2.859   2.273
+tenure_months          15.892             16.024    23.000             23.000  -0.823   0.000
+annual_income           0.262              0.201     0.331              0.318  30.770   4.065
+orders_12m              0.540              0.491     0.865              0.845  10.014   2.391
+avg_order_value         0.337              0.308     0.392              0.385   9.102   1.658
+recency_days            1.655              1.646     2.558              2.587   0.563  -1.108
+discount_usage_rate     0.275              0.279     0.465              0.475  -1.443  -2.052
+return_rate             0.393              0.390     0.528              0.529   0.701  -0.064
+avg_session_minutes    21.832             21.888    37.000             36.975  -0.254   0.068
+city_tier               0.809              0.807     2.000              2.000   0.155   0.000
+Sau biến đổi log, 6 bản ghi cực đoan làm std thay đổi tối đa 30.8% (annual_income) -> cần cân nhắc thang đo bền.
+
+So sánh 3 phương án chuẩn hóa theo 2 tiêu chí:
+  (1) cân bằng: tỷ số đóng góp lớn nhất / nhỏ nhất giữa các thuộc tính, tính trên 194 khách thường (lý tưởng = 1)
+  (2) lấn át: tỷ trọng bình phương khoảng cách thuộc về các cặp có ≥ 1 khách cực đoan (số cặp này chỉ chiếm 5.9%)
+                                 đóng góp max/min (khách thường) thuộc tính bị giảm trọng số nhất  var nhỏ nhất  tỷ trọng khoảng cách của cặp cực đoan
+phương án                                                                                                                                             
+standard (fit 200)                                         1.761                    annual_income         0.585                                  0.133
+robust (median, IQR/1.349)                                 3.806                        city_tier         0.295                                  0.156
+standard (fit 194 khách thường)                            1.000              avg_session_minutes         1.000                                  0.156
+-> Chọn: standard (fit 194 khách thường).
+   Robust (IQR) làm lệch trọng số: thuộc tính có phân bố bẹt/hai đỉnh bị đánh giá phân tán thấp hơn thực tế,
+   city_tier (3 giá trị) có IQR thô -> đóng góp không đều. Standard fit trên toàn bộ thì std của annual_income bị
+   6 khách cực đoan thổi phồng 31% -> nén thu nhập của 194 khách còn lại.
+   Fit trên 194 khách thường: mọi thuộc tính có phương sai 1 với nhóm khách thường (đóng góp đều),
+   6 khách cực đoan vẫn ở xa - đúng vì họ thật sự khác biệt - và phép biến đổi áp dụng như nhau cho mọi bản ghi.
+
+====================================================================================================
+D3. MÃ HÓA THUỘC TÍNH PHÂN LOẠI
+====================================================================================================
+city_tier: thứ bậc (1 < 2 < 3) -> giữ dạng số, chuẩn hóa như thuộc tính số.
+Định danh -> one-hot. Vấn đề: one-hot thô cho mỗi thuộc tính k mức thành k cột 0/1, đóng góp vào khoảng cách
+không tương xứng với 1 thuộc tính số đã chuẩn hóa. Cân bằng theo ĐÓNG GÓP KỲ VỌNG vào bình phương khoảng cách:
+  - thuộc tính số chuẩn hóa: E[(x_i - x_j)²] = 2·Var = 2
+  - one-hot nhân trọng số w: E = 2·w²·(1 - Σp_k²)  (2 cột khác nhau khi hai khách khác mức)
+  -> w = 1 / sqrt(1 - Σp_k²) để mỗi thuộc tính, dù số hay định danh, đóng góp kỳ vọng như nhau.
+  payment_method: tần suất {'COD': 0.31, 'E_Wallet': 0.285, 'Credit_Card': 0.255, 'Bank_Transfer': 0.15} -> w = 1.166
+
+Ma trận chuẩn bị: 200 × 14 (10 số/thứ bậc + 4 cột one-hot từ 1 thuộc tính định danh)
+Tỷ trọng đóng góp vào khoảng cách - 194 khách thường: {'age': 0.091, 'tenure_months': 0.091, 'annual_income': 0.091, 'orders_12m': 0.091, 'avg_order_value': 0.091, 'recency_days': 0.091, 'discount_usage_rate': 0.091, 'return_rate': 0.091, 'avg_session_minutes': 0.091, 'city_tier': 0.091, 'payment_method': 0.091}
+                                    - cả 200 khách:   {'age': 0.087, 'tenure_months': 0.081, 'annual_income': 0.141, 'orders_12m': 0.1, 'avg_order_value': 0.098, 'recency_days': 0.083, 'discount_usage_rate': 0.08, 'return_rate': 0.083, 'avg_session_minutes': 0.082, 'city_tier': 0.083, 'payment_method': 0.082}
+
+====================================================================================================
+D5. GIẢM CHIỀU BẰNG PCA (phương án thay thế để so sánh ở Câu e)
+====================================================================================================
+Phương sai giải thích (tích lũy): {'PC1': 0.318, 'PC2': 0.533, 'PC3': 0.636, 'PC4': 0.708, 'PC5': 0.767, 'PC6': 0.824, 'PC7': 0.87, 'PC8': 0.901, 'PC9': 0.927, 'PC10': 0.95, 'PC11': 0.969, 'PC12': 0.987, 'PC13': 1.0, 'PC14': 1.0}
+Số thành phần: phân tích song song -> 2; ngưỡng 80% phương sai -> 6
+Mức bảo toàn cấu trúc theo số thành phần (so với không gian đầy đủ 14 chiều):
+   phương_sai  tương_quan_khoảng_cách  giữ_10_láng_giềng
+K                                                       
+2       0.533                   0.880              0.285
+3       0.636                   0.930              0.406
+5       0.767                   0.965              0.518
+6       0.824                   0.977              0.584
+9       0.927                   0.993              0.746
+K = 2 theo phân tích song song chỉ giữ 53.3% phương sai và 28% láng giềng gần;
+K = 6 (80% phương sai) giữ 58% láng giềng nhưng chỉ giảm 14 -> 6 chiều.
+-> KHÔNG dùng PCA làm đầu vào chính: 14 chiều với n = 200 không phải là chiều cao, và PCA làm mất cấu trúc cục bộ
+   mà phân cụm cần. Lưu PCA 2 chiều để TRỰC QUAN HÓA và làm phương án so sánh ở Câu e.
+Hệ số tải (|loading| ≥ 0.3 được coi là đóng góp chính):
+                               PC1   PC2
+age                           0.24 -0.21
+tenure_months                 0.27  0.09
+annual_income                 0.55 -0.23
+orders_12m                    0.38  0.43
+avg_order_value               0.46 -0.21
+recency_days                 -0.23 -0.37
+discount_usage_rate          -0.21  0.42
+return_rate                  -0.27 -0.11
+avg_session_minutes           0.08  0.55
+city_tier                    -0.11 -0.14
+payment_method_Bank_Transfer  0.00 -0.00
+payment_method_COD           -0.08 -0.10
+payment_method_Credit_Card    0.11 -0.01
+payment_method_E_Wallet      -0.03  0.11
+
+====================================================================================================
+D6. GIẢM SỐ ĐỐI TƯỢNG
+====================================================================================================
+n = 200; bản ghi trùng lặp hoàn toàn sau chuẩn bị: 0.
+Không lấy mẫu / không gom nhóm: 200 bản ghi nhỏ, mọi thuật toán phân cụm chạy tức thì; lấy mẫu có nguy cơ
+làm mất nhóm nhỏ như 6 khách số đơn cực đoan (3% dữ liệu). Không loại bản ghi nào.
+
+====================================================================================================
+D7. PHÂN TÍCH THAY ĐỔI TRƯỚC / SAU CHUẨN BỊ
+====================================================================================================
+Tỷ trọng đóng góp vào bình phương khoảng cách:
+                     thô (chưa chuẩn hóa)  chỉ z-score  sau chuẩn bị
+age                                   0.0          0.1        0.0871
+tenure_months                         0.0          0.1        0.0810
+annual_income                         0.0          0.1        0.1408
+orders_12m                            0.0          0.1        0.0996
+avg_order_value                       0.0          0.1        0.0980
+total_spend_12m                       1.0          0.1        0.0000
+recency_days                          0.0          0.1        0.0833
+discount_usage_rate                   0.0          0.1        0.0800
+return_rate                           0.0          0.1        0.0835
+avg_session_minutes                   0.0          0.1        0.0819
+city_tier                             0.0          0.0        0.0826
+payment_method                        0.0          0.0        0.0823
+
+Cặp có ≥ 1 khách cực đoan chiếm 5.9% số cặp; chiếm 36.7% tổng bình phương khoảng cách khi chỉ z-score -> 14.8% sau chuẩn bị (vẫn xa nhưng không còn lấn át)
+Hopkins (0.5 = ngẫu nhiên, → 1 = có cụm): chỉ z-score 0.840 ± 0.018; sau chuẩn bị 0.660 ± 0.017; PCA 2 chiều 0.803 ± 0.043
+Lưu ý: Hopkins cao ở dữ liệu chỉ z-score một phần do vài điểm cực đoan làm khung lấy mẫu đều rất rộng, không nhất thiết là cấu trúc cụm tốt hơn.
+|Pearson| lớn nhất giữa các thuộc tính số sau chuẩn bị: 0.72 (('annual_income', 'avg_order_value')) - không còn cặp nào > 0.9
+Độ lệch trước/sau:
+             age  tenure_months  annual_income  orders_12m  avg_order_value  recency_days  discount_usage_rate  return_rate  avg_session_minutes
+skew trước  0.15           0.52           5.04        4.99             3.17          2.00                 0.27         1.41                 0.41
+skew sau    0.15           0.52           1.50        0.08             0.66          0.04                 0.27        -0.24                 0.41
+
+====================================================================================================
+LƯU KẾT QUẢ
+====================================================================================================
+data/05_prepared.csv: (200, 15); data/05_prepared_pca.csv: 200 × 2; data/05_prepared_aov03.csv: 22 AOV khác 05_prepared; cau_d/prep_params.json
+[hình] figures/d_feature_contribution.png
+[hình] figures/d_distributions_after.png
+[hình] figures/d_pca.png
+[hình] figures/d_correlation_after.png
+
+Xong.
