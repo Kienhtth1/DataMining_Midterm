@@ -121,14 +121,22 @@ for col, (kind, sd) in NOISE.items():
     idx = rng.choice(non_out, size=int(0.30 * N), replace=False)
     for j in idx:
         old = df.at[j, col]
-        if kind == "mult":
-            new = round(old * (1 + rng.normal(0, sd)), -3)
+        # Rút lại nhiễu nếu sau làm tròn/cắt biên giá trị không đổi (tối đa 100 lần).
+        # Hệ quả: phân phối nhiễu thực tế là N(0, sd) bỏ đi vùng |nhiễu| < 1/2 bước làm tròn
+        # (1000 VND, 0.1 phút, 0.001) - sai lệch không đáng kể so với sd.
+        for _ in range(100):
+            if kind == "mult":
+                new = round(old * (1 + rng.normal(0, sd)), -3)
+            else:
+                new = old + rng.normal(0, sd)
+            if col == "discount_usage_rate":
+                new = round(float(np.clip(new, 0, 1)), 3)
+            elif col == "avg_session_minutes":
+                new = round(max(0.5, new), 1)
+            if not np.isclose(new, old):
+                break
         else:
-            new = old + rng.normal(0, sd)
-        if col == "discount_usage_rate":
-            new = round(float(np.clip(new, 0, 1)), 3)
-        elif col == "avg_session_minutes":
-            new = round(max(0.5, new), 1)
+            raise RuntimeError(f"Không tạo được nhiễu khác giá trị gốc tại ({j}, {col})")
         df.at[j, col] = new
         log.append(dict(row=j, customer_id=df.at[j, "customer_id"], column=col,
                         type="noise", old=old, new=new))
@@ -240,6 +248,11 @@ assert not lg.duplicated(["row", "column"]).any(), "Có ô bị tác động nhi
 # (ii) giá trị trong file 03 khớp cột 'new' của log
 mismatch = [(r.row, r.column) for r in lg.itertuples() if not same(f03.at[r.row, r.column], r.new)]
 assert not mismatch, f"Log không khớp file 03: {mismatch}"
+# (iv) mọi tác động phải có hiệu lực: new khác old (và old phải bằng giá trị sạch)
+no_effect = [(r.row, r.column, r.type) for r in lg.itertuples() if same(r.old, r.new)]
+assert not no_effect, f"Tác động không làm đổi giá trị: {no_effect}"
+wrong_old = [(r.row, r.column) for r in lg.itertuples() if not same(r.old, f01.at[r.row, r.column])]
+assert not wrong_old, f"Cột 'old' không bằng giá trị sạch: {wrong_old}"
 # (iii) mọi ô KHÔNG có trong log phải giống hệt dữ liệu sạch
 logged = set(zip(lg.row, lg.column))
 untouched_diff = [(j, c) for j in range(N) for c in COLS
@@ -260,4 +273,4 @@ print("Số ô thiếu:", f03.isna().sum()[f03.isna().sum() > 0].to_dict())
 print("Số ô theo loại:", lg.type.value_counts().to_dict())
 print("Phân khúc:", f01.true_segment.value_counts().to_dict())
 assert len(f03) == 200 and n_inputs >= 10 and len(miss_cols) >= 2 and len(noise_cols) >= 2 and n_out >= 11
-print("OK - log khớp 1-1 với file 03, mọi ràng buộc đạt.")
+print("OK - log khớp 1-1 với file 03, mọi tác động có hiệu lực, mọi ràng buộc đạt.")

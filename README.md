@@ -44,7 +44,8 @@ Chạy lại sẽ sinh ra đúng các file trong `data/` (seed cố định = 24
 - Ngoại lai hợp lệ: khách mua sỉ - số đơn 120-260, AOV ~3.5 triệu, các thuộc tính nhất quán nội tại.
 
 - Các bước tác động loại trừ nhau: mỗi ô bị tác động tối đa 1 lần. Nhiễu chỉ áp lên 186 bản ghi không phải ngoại lai; giá trị thiếu chỉ xóa ô chưa bị nhiễu/ngoại lai. Nhờ vậy `injection_log.csv` khớp 1-1 với file 03.
-- Script tự kiểm tra trên file 03 đọc lại từ đĩa: (i) không ô nào bị tác động 2 lần, (ii) giá trị cuối khớp cột `new` của log, (iii) mọi ô ngoài log giống hệt dữ liệu sạch.
+- Script tự kiểm tra trên file 03 đọc lại từ đĩa: (i) không ô nào bị tác động 2 lần, (ii) giá trị cuối khớp cột `new` của log, (iii) mọi ô ngoài log giống hệt dữ liệu sạch, (iv) mọi tác động có hiệu lực (`new` ≠ `old`) và `old` bằng giá trị sạch.
+- Nhiễu được rút lại nếu sau làm tròn/cắt biên không làm đổi giá trị, nên phân phối nhiễu thực tế bỏ đi vùng |nhiễu| < 1/2 bước làm tròn (sai lệch không đáng kể).
 
 **Hạn chế:** giá trị thiếu không bao giờ rơi vào ô nhiễu/ngoại lai, nên MCAR/MAR chỉ đúng trên tập ô đủ điều kiện; thuộc tính gần như độc lập có điều kiện trong mỗi phân khúc; ranh giới phân khúc rõ hơn dữ liệu thực.
 
