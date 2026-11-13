@@ -1,6 +1,6 @@
 # DataMining_Midterm
 
-Đề thi giữa kỳ môn Phân tích và khai phá dữ liệu (UET, HK I 2026-2027) - bài toán phân cụm khách hàng sàn TMĐT.
+Đề thi giữa kỳ môn Phân tích và khai phá dữ liệu - bài toán phân cụm khách hàng sàn TMĐT.
 
 ## Tham số theo MSSV
 
