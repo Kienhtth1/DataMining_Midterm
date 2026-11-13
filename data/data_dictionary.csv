@@ -1,0 +1,16 @@
+attribute,group,dtype,description
+customer_id,ID,string,Mã khách hàng - không dùng để phân cụm
+age,Nhân khẩu học,int,Tuổi (18-70)
+gender,Nhân khẩu học,nominal,F/M
+city_tier,Nhân khẩu học,ordinal,"1 = TP lớn, 2 = TP vừa, 3 = tỉnh"
+tenure_months,Quan hệ,int,Số tháng từ khi đăng ký
+annual_income,Kinh tế,float,Thu nhập tự khai (triệu VND/năm)
+orders_12m,Hành vi (F),int,Số đơn hàng 12 tháng
+avg_order_value,Hành vi (M),float,Giá trị đơn trung bình (VND)
+total_spend_12m,Hành vi (M),float,Tổng chi tiêu 12 tháng (VND) - dẫn xuất ~ orders x AOV
+recency_days,Hành vi (R),int,Số ngày từ lần mua gần nhất
+discount_usage_rate,Hành vi,"float [0,1]",Tỷ lệ đơn dùng mã giảm giá
+return_rate,Hành vi,"float [0,1]",Tỷ lệ đơn bị trả hàng
+avg_session_minutes,Tương tác,float,Phút truy cập trung bình/tuần
+preferred_category,Sở thích,nominal,Ngành hàng mua nhiều nhất (5 giá trị)
+payment_method,Sở thích,nominal,Phương thức thanh toán chính (4 giá trị)
