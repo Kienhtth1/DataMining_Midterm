@@ -163,6 +163,88 @@ ax.set_title("Ma trận tương quan Spearman (file 03, đã bỏ ô vi phạm m
 fig.tight_layout()
 save(fig, "b_correlation.png")
 
+# ---------------------------------------------------------------------------- 4b. Dư thừa do quan hệ nhân
+section("4b. DƯ THỪA total ≈ orders × AOV: tương quan từng cặp KHÔNG đo đúng, cần hồi quy trên thang log")
+spend = dv[["orders_12m", "avg_order_value", "total_spend_12m"]].dropna()
+L = np.log10(spend)
+print(f"n = {len(L)} bản ghi (đã bỏ các ô vi phạm miền, gồm AOV âm và total sai đơn vị)")
+
+
+def ols(y, X):
+    A = np.column_stack([np.ones(len(X)), X])
+    beta, *_ = np.linalg.lstsq(A, y, rcond=None)
+    res = y - A @ beta
+    return beta, 1 - res.var() / y.var(), res.std(ddof=A.shape[1])
+
+
+beta, r2, se = ols(L["total_spend_12m"].values, L[["orders_12m", "avg_order_value"]].values)
+print(f"log10(total) = {beta[0]:.3f} + {beta[1]:.3f}·log10(orders) + {beta[2]:.3f}·log10(AOV)")
+print(f"  R² = {r2:.4f}, độ lệch chuẩn phần dư = {se:.4f} (log10) ≈ ±{(10**se - 1):.1%} trên thang gốc")
+print("  -> hệ số ≈ 1 đúng như quan hệ total = orders × AOV; total gần như là tổ hợp tuyến tính (trên thang log) của 2 thuộc tính kia")
+r2_o = ols(L["total_spend_12m"].values, L[["orders_12m"]].values)[1]
+r2_a = ols(L["total_spend_12m"].values, L[["avg_order_value"]].values)[1]
+print(f"  So sánh: R² chỉ với log(orders) = {r2_o:.3f}; chỉ với log(AOV) = {r2_a:.3f}; "
+      f"ρ Spearman (orders, total) = {spend.corr('spearman').iat[0, 2]:.3f}, (AOV, total) = {spend.corr('spearman').iat[1, 2]:.3f}")
+vif = {c: 1 / (1 - ols(L[c].values, L.drop(columns=c).values)[1]) for c in L.columns}
+print("  VIF trên thang log:", {k: round(float(v), 1) for k, v in vif.items()}, "(VIF > 10 = đa cộng tuyến nghiêm trọng)")
+print(f"  ρ Spearman (orders, AOV) = {spend.corr('spearman').iat[0, 1]:.3f} -> hai thành phần gần độc lập, mỗi cái mang thông tin riêng")
+
+# Nếu CHỈ giữ total: mất chiều "phong cách mua" = log(orders) - log(AOV) (vuông góc với log(total))
+style = (L["orders_12m"] - L["avg_order_value"]).rename("style")
+print(f"\nChiều bị mất nếu chỉ giữ total: style = log10(orders) - log10(AOV)")
+print(f"  std(style) = {style.std():.3f} vs std(log10 total) = {L['total_spend_12m'].std():.3f}; "
+      f"ρ(style, log total) = {stats.spearmanr(style, L['total_spend_12m'])[0]:.3f}")
+beh = dv.loc[style.index, ["discount_usage_rate", "avg_session_minutes", "recency_days", "return_rate"]]
+cmp = pd.DataFrame({
+    "ρ với log10(total)": [stats.spearmanr(L["total_spend_12m"], beh[c], nan_policy="omit")[0] for c in beh],
+    "ρ với style": [stats.spearmanr(style, beh[c], nan_policy="omit")[0] for c in beh]}, index=beh.columns)
+print("  Tương quan Spearman của các hành vi khác với total và với style:")
+print(cmp.round(3).to_string())
+print("  -> discount_usage_rate gần như không liên quan đến total nhưng liên quan rõ đến style: thông tin này CHỈ nằm trong style")
+lt, st = L["total_spend_12m"].values, style.values
+i, j = np.triu_indices(len(lt), k=1)
+same_total = np.abs(lt[i] - lt[j]) < np.log10(1.10)          # tổng chi tiêu chênh < 10%
+diff_style = np.abs(st[i] - st[j]) > 1                         # tỷ số orders/AOV chênh > 10 lần
+print(f"  Cặp khách có tổng chi tiêu chênh < 10%: {same_total.sum()}; trong đó {(same_total & diff_style).sum()} cặp "
+      f"({(same_total & diff_style).sum() / same_total.sum():.1%}) có tỷ số orders/AOV chênh > 10 lần "
+      f"-> chỉ dùng total sẽ coi các cặp này là gần nhau")
+k = int(np.argmax(np.where(same_total & diff_style, np.abs(st[i] - st[j]), -1)))
+a_, b_ = style.index[i[k]], style.index[j[k]]
+print("  Ví dụ:", " | ".join(f"{df.at[x, 'customer_id']}: {int(df.at[x, 'orders_12m'])} đơn × "
+                             f"{df.at[x, 'avg_order_value']/1e3:.0f}k = {df.at[x, 'total_spend_12m']/1e6:.2f} triệu" for x in (a_, b_)))
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5.4))
+ax = axes[0]
+pred = beta[0] + beta[1] * L["orders_12m"] + beta[2] * L["avg_order_value"]
+ax.scatter(pred, L["total_spend_12m"], s=16, alpha=0.6, color=BLUE)
+mn, mx = pred.min(), pred.max()
+ax.plot([mn, mx], [mn, mx], color=RED, lw=1)
+ax.set_xlabel("log10(total) dự đoán từ log10(orders) + log10(AOV)")
+ax.set_ylabel("log10(total_spend_12m) thực tế")
+ax.set_title(f"Hồi quy trên thang log: R² = {r2:.3f}, hệ số {beta[1]:.2f} và {beta[2]:.2f}\n"
+             f"(trong khi ρ(AOV, total) chỉ {spend.corr('spearman').iat[1, 2]:.2f})", fontsize=10)
+ax = axes[1]
+sc = ax.scatter(L["orders_12m"], L["avg_order_value"], c=L["total_spend_12m"], cmap="viridis", s=18)
+ylo, yhi = L["avg_order_value"].min() - 0.1, L["avg_order_value"].max() + 0.15
+xlo, xhi = L["orders_12m"].min() - 0.1, L["orders_12m"].max() + 0.1
+for lvl in range(6, 10):
+    xs = np.linspace(xlo, xhi, 50)
+    ax.plot(xs, lvl - xs, color="0.5", lw=0.7, ls="--")
+    xt = lvl - (ylo + 0.08)                       # điểm đường cắt gần đáy khung
+    if xlo < xt < xhi:
+        ax.text(xt, ylo + 0.08, f"10^{lvl} VND", fontsize=7.5, color="0.35", rotation=-35, ha="right", va="bottom")
+for x, mk in ((a_, "o"), (b_, "s")):
+    ax.scatter(L.at[x, "orders_12m"], L.at[x, "avg_order_value"], s=120, facecolors="none", edgecolors=RED, lw=1.6)
+    ax.annotate(df.at[x, "customer_id"], (L.at[x, "orders_12m"], L.at[x, "avg_order_value"]),
+                xytext=(6, 6), textcoords="offset points", fontsize=8, color=RED)
+ax.set_xlim(xlo, xhi); ax.set_ylim(ylo, yhi)
+fig.colorbar(sc, ax=ax, label="log10(total)")
+ax.set_xlabel("log10(orders_12m)"); ax.set_ylabel("log10(avg_order_value)")
+ax.set_title(f"Đường đứt = cùng tổng chi tiêu. Chỉ giữ total thì mất vị trí dọc đường\n"
+             f"(nhiều đơn rẻ ↔ ít đơn đắt), vd {df.at[a_, 'customer_id']} và {df.at[b_, 'customer_id']} (đỏ) thành 'giống nhau'", fontsize=10)
+fig.tight_layout()
+save(fig, "b_spend_redundancy.png")
+
 # ============================================================================ 5. Giá trị thiếu
 section("5. GIÁ TRỊ THIẾU")
 miss = df.isna().sum()
