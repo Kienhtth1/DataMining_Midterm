@@ -1,0 +1,59 @@
+
+====================================================================================================
+E1. SAI SỐ ĐIỀN GIÁ TRỊ THIẾU (ô thiếu trong 03) so với file 01
+====================================================================================================
+MAE (thang gốc):
+                     MAE_median  MAE_knn  MAE_iterative  MAE_chosen   n  chosen
+column                                                                         
+annual_income            95.168   50.784         56.324      50.784  31     knn
+avg_session_minutes      20.038    8.655         12.817       8.655  16     knn
+city_tier                 0.700    0.600          0.700       0.700  10  median
+
+NMAE = MAE / IQR của file 01:
+                     NMAE_median  NMAE_knn  NMAE_iterative  NMAE_chosen
+column                                                                 
+annual_income              0.508     0.271           0.301        0.271
+avg_session_minutes        0.525     0.227           0.336        0.227
+city_tier                  0.350     0.300           0.350        0.350
+
+city_tier - độ chính xác: {'median': 0.3, 'knn': 0.4, 'iterative': 0.3, 'chosen': 0.3} | tỷ lệ lớp phổ biến nhất trong 01: 0.385
+
+annual_income: sai lệch trung bình (điền - thật, triệu/năm) theo nhóm tuổi:
+          n  sai_lệch_TB_median  sai_lệch_TB_knn  sai_lệch_TB_iterative
+grp                                                                    
+18-27  17.0                39.4             -1.7                   10.8
+28-39  12.0               -26.5            -10.1                   13.4
+40+     2.0               -22.6            -19.1                   37.0
+
+Cách tốt nhất theo kiểm định nội bộ (03) trùng với cách tốt nhất trên dữ liệu thật (01)? {'annual_income': True, 'avg_session_minutes': True, 'city_tier': False}
+
+====================================================================================================
+E2. Ô LỖI / NGHI NGỜ ĐÃ SỬA so với file 01
+====================================================================================================
+customer_id              column  step_type       old       new     truth  sai_số_sau_%  nếu_median  nếu_knn  nếu_iterative
+      C0166     total_spend_12m         A1 6.726e+09 6.705e+06 6.726e+06           0.3         NaN      NaN            NaN
+      C0062     avg_order_value         A1 -5.66e+05  5.89e+05  5.66e+05           4.1         NaN      NaN            NaN
+      C0019                 age   A5-error       150        33        23          43.5          33       30             33
+      C0191                 age   A5-error         3        36        39           7.7          33       34             36
+      C0120       tenure_months   A5-error        -5        36        33           9.1          25       36             26
+      C0161        recency_days   A5-error     9,999        13        10            30          17       15             13
+      C0116         return_rate   A5-error       1.8    0.2183      0.48          54.5       0.095   0.2183         0.2048
+      C0195 avg_session_minutes A5-suspect     1,440     45.52      47.4             4        30.8    45.52          36.35
+
+====================================================================================================
+E3. ĐỐI SOÁT NHIỄU AOV (A3)
+====================================================================================================
+Ô AOV thực sự có nhiễu (theo log): 60; A3 sửa: 22; đúng: 22
+  precision = 1.00, recall = 0.37
+  các bản ghi A3 đã sửa                    n= 22: sai số tương đối AOV TB 20.50% (03) -> 2.81% (04); trung vị 19.12% -> 2.79%
+  ô nhiễu A3 KHÔNG bắt được                n= 38: sai số tương đối AOV TB 6.79% (03) -> 6.79% (04); trung vị 6.60% -> 6.60%
+  toàn bộ (trừ khách mua sỉ, trừ AOV âm)   n=193: sai số tương đối AOV TB 3.67% (03) -> 1.66% (04); trung vị 0.00% -> 0.00%
+  Ô nhiễu ở avg_session_minutes, discount_usage_rate (không xử lý): sai số tương đối TB vẫn là {'avg_session_minutes': '23.0%', 'discount_usage_rate': '22.3%'}
+
+====================================================================================================
+E4. KHÁCH MUA SỈ ĐƯỢC GIỮ NGUYÊN?
+====================================================================================================
+6 khách mua sỉ; số ô quan sát được bị thay đổi: 0 []
+Ô thiếu của họ được điền: [{'customer_id': 'C0112', 'column': 'avg_session_minutes', 'new': 38.33936659367463, 'step_type': 'A5-missing'}]
+
+[hình] figures/c_eval_imputation.png

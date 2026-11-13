@@ -1,0 +1,88 @@
+customer_id,column,old,new,step,reason,step_type
+C0166,total_spend_12m,6726000000.0,6705000.0,A1,sai đơn vị (tỷ lệ ~1000): total = orders × AOV,A1
+C0062,avg_order_value,-566000.0,589000.0,A1,AOV âm: AOV = total / orders,A1
+C0001,avg_order_value,1937000.0,1570000.0,A3,đối soát nhiễu: tỷ lệ 0.811 ngoài dải,A3
+C0015,avg_order_value,446000.0,608000.0,A3,đối soát nhiễu: tỷ lệ 1.363 ngoài dải,A3
+C0023,avg_order_value,244000.0,294000.0,A3,đối soát nhiễu: tỷ lệ 1.207 ngoài dải,A3
+C0031,avg_order_value,471000.0,570000.0,A3,đối soát nhiễu: tỷ lệ 1.211 ngoài dải,A3
+C0049,avg_order_value,611000.0,697000.0,A3,đối soát nhiễu: tỷ lệ 1.141 ngoài dải,A3
+C0050,avg_order_value,182000.0,256000.0,A3,đối soát nhiễu: tỷ lệ 1.408 ngoài dải,A3
+C0057,avg_order_value,208000.0,167000.0,A3,đối soát nhiễu: tỷ lệ 0.804 ngoài dải,A3
+C0059,avg_order_value,737000.0,591000.0,A3,đối soát nhiễu: tỷ lệ 0.802 ngoài dải,A3
+C0087,avg_order_value,282000.0,326000.0,A3,đối soát nhiễu: tỷ lệ 1.156 ngoài dải,A3
+C0091,avg_order_value,311000.0,358000.0,A3,đối soát nhiễu: tỷ lệ 1.150 ngoài dải,A3
+C0099,avg_order_value,265000.0,221000.0,A3,đối soát nhiễu: tỷ lệ 0.835 ngoài dải,A3
+C0108,avg_order_value,1395000.0,1100000.0,A3,đối soát nhiễu: tỷ lệ 0.788 ngoài dải,A3
+C0110,avg_order_value,2007000.0,2333000.0,A3,đối soát nhiễu: tỷ lệ 1.162 ngoài dải,A3
+C0124,avg_order_value,1062000.0,1483000.0,A3,đối soát nhiễu: tỷ lệ 1.396 ngoài dải,A3
+C0136,avg_order_value,189000.0,227000.0,A3,đối soát nhiễu: tỷ lệ 1.201 ngoài dải,A3
+C0145,avg_order_value,2276000.0,1753000.0,A3,đối soát nhiễu: tỷ lệ 0.770 ngoài dải,A3
+C0150,avg_order_value,281000.0,444000.0,A3,đối soát nhiễu: tỷ lệ 1.582 ngoài dải,A3
+C0153,avg_order_value,903000.0,759000.0,A3,đối soát nhiễu: tỷ lệ 0.841 ngoài dải,A3
+C0162,avg_order_value,502000.0,440000.0,A3,đối soát nhiễu: tỷ lệ 0.877 ngoài dải,A3
+C0165,avg_order_value,247000.0,305000.0,A3,đối soát nhiễu: tỷ lệ 1.235 ngoài dải,A3
+C0177,avg_order_value,162000.0,186000.0,A3,đối soát nhiễu: tỷ lệ 1.150 ngoài dải,A3
+C0190,avg_order_value,431000.0,349000.0,A3,đối soát nhiễu: tỷ lệ 0.810 ngoài dải,A3
+C0019,age,150.0,33.0,A5,điền bằng iterative,A5-error
+C0191,age,3.0,36.0,A5,điền bằng iterative,A5-error
+C0120,tenure_months,-5.0,36.0,A5,điền bằng knn,A5-error
+C0007,annual_income,,445.38487973772095,A5,điền bằng knn,A5-missing
+C0019,annual_income,,227.42187714979866,A5,điền bằng knn,A5-missing
+C0040,annual_income,,163.74675121098502,A5,điền bằng knn,A5-missing
+C0051,annual_income,,337.55064625701897,A5,điền bằng knn,A5-missing
+C0054,annual_income,,149.58476845483798,A5,điền bằng knn,A5-missing
+C0055,annual_income,,306.75646737898927,A5,điền bằng knn,A5-missing
+C0065,annual_income,,266.1247120324112,A5,điền bằng knn,A5-missing
+C0068,annual_income,,261.33134134063664,A5,điền bằng knn,A5-missing
+C0070,annual_income,,154.7694527693314,A5,điền bằng knn,A5-missing
+C0078,annual_income,,186.21009346436497,A5,điền bằng knn,A5-missing
+C0083,annual_income,,172.64142358903712,A5,điền bằng knn,A5-missing
+C0088,annual_income,,213.86762764672616,A5,điền bằng knn,A5-missing
+C0090,annual_income,,239.9610859897006,A5,điền bằng knn,A5-missing
+C0099,annual_income,,169.4865476686,A5,điền bằng knn,A5-missing
+C0101,annual_income,,427.9675736550538,A5,điền bằng knn,A5-missing
+C0107,annual_income,,160.99943013311167,A5,điền bằng knn,A5-missing
+C0108,annual_income,,394.3956482571776,A5,điền bằng knn,A5-missing
+C0111,annual_income,,287.43557410972375,A5,điền bằng knn,A5-missing
+C0116,annual_income,,225.3236251943089,A5,điền bằng knn,A5-missing
+C0120,annual_income,,172.8573491101871,A5,điền bằng knn,A5-missing
+C0129,annual_income,,224.4721832610787,A5,điền bằng knn,A5-missing
+C0135,annual_income,,199.07035189796295,A5,điền bằng knn,A5-missing
+C0142,annual_income,,164.74388890439883,A5,điền bằng knn,A5-missing
+C0144,annual_income,,453.06289119068686,A5,điền bằng knn,A5-missing
+C0154,annual_income,,211.6015949467958,A5,điền bằng knn,A5-missing
+C0167,annual_income,,245.21712858727471,A5,điền bằng knn,A5-missing
+C0168,annual_income,,436.1267672797677,A5,điền bằng knn,A5-missing
+C0174,annual_income,,172.68720094316998,A5,điền bằng knn,A5-missing
+C0185,annual_income,,317.68221458275906,A5,điền bằng knn,A5-missing
+C0194,annual_income,,239.8233890975481,A5,điền bằng knn,A5-missing
+C0200,annual_income,,172.50376282789327,A5,điền bằng knn,A5-missing
+C0161,recency_days,9999.0,13.0,A5,điền bằng iterative,A5-error
+C0116,return_rate,1.8,0.21829013510281126,A5,điền bằng knn,A5-error
+C0008,avg_session_minutes,,18.590501120875224,A5,điền bằng knn,A5-missing
+C0018,avg_session_minutes,,38.66755731299306,A5,điền bằng knn,A5-missing
+C0023,avg_session_minutes,,67.22155655578196,A5,điền bằng knn,A5-missing
+C0025,avg_session_minutes,,18.36313696379392,A5,điền bằng knn,A5-missing
+C0029,avg_session_minutes,,5.245283490088421,A5,điền bằng knn,A5-missing
+C0048,avg_session_minutes,,17.407643263840527,A5,điền bằng knn,A5-missing
+C0084,avg_session_minutes,,15.452750256921219,A5,điền bằng knn,A5-missing
+C0087,avg_session_minutes,,10.13171951957171,A5,điền bằng knn,A5-missing
+C0110,avg_session_minutes,,38.153701488923694,A5,điền bằng knn,A5-missing
+C0112,avg_session_minutes,,38.339366593674626,A5,điền bằng knn,A5-missing
+C0119,avg_session_minutes,,38.07514606087029,A5,điền bằng knn,A5-missing
+C0124,avg_session_minutes,,33.65180482185856,A5,điền bằng knn,A5-missing
+C0133,avg_session_minutes,,17.744776621089617,A5,điền bằng knn,A5-missing
+C0154,avg_session_minutes,,12.203520809836979,A5,điền bằng knn,A5-missing
+C0181,avg_session_minutes,,13.586705363815312,A5,điền bằng knn,A5-missing
+C0190,avg_session_minutes,,56.49188882283762,A5,điền bằng knn,A5-missing
+C0195,avg_session_minutes,1440.0,45.51745761631684,A5,điền bằng knn,A5-suspect
+C0032,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0039,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0057,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0069,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0084,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0097,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0108,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0136,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0170,city_tier,,2.0,A5,điền bằng median,A5-missing
+C0171,city_tier,,2.0,A5,điền bằng median,A5-missing

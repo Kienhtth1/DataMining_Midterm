@@ -1,0 +1,117 @@
+
+====================================================================================================
+A1. LỖI MIỀN GIÁ TRỊ (quy tắc từ Câu b)
+====================================================================================================
+  C0166: total/(orders×AOV) = 1003.1 ≈ 10^3.00 -> lỗi đơn vị ở total; sửa total = orders × AOV = 6,705,000
+  C0062: AOV = -566,000 ≤ 0; total/orders = 589,000 (|AOV| lệch 3.9%) -> sửa AOV = total / orders
+  C0019: age = 150 vi phạm miền -> NaN, điền lại ở A5
+  C0191: age = 3 vi phạm miền -> NaN, điền lại ở A5
+  C0120: tenure_months = -5 vi phạm miền -> NaN, điền lại ở A5
+  C0161: recency_days = 9999 vi phạm miền -> NaN, điền lại ở A5
+  C0116: return_rate = 1.8 vi phạm miền -> NaN, điền lại ở A5
+
+====================================================================================================
+A2. avg_session_minutes = 1440 (ngoại lai không vi phạm miền)
+====================================================================================================
+  C0195: 1440 phút/tuần, ngưỡng IQR trên = 112.5 (gấp 12.8 lần)
+    1440 = 24 × 60 = đúng số phút trong MỘT NGÀY -> nghi ghi nhầm đơn vị (phút/ngày) hoặc giá trị mặc định
+    Khách này có 18 đơn, recency 4.0 ngày; khách có 15-21 đơn: session trung vị 56.5, max 80.6 -> 1440 không nhất quán với hành vi
+    Phương án: (1) giữ - méo std 105.9 vs 22.1; (2) winsorize về 112.5 - vẫn là giá trị bịa, cực đại giả; (3) CHỌN: coi là lỗi nghi ngờ -> NaN, điền theo hàng xóm, ghi cờ trong log
+
+====================================================================================================
+A3. NHIỄU: đối soát avg_order_value với total_spend_12m / orders_12m
+====================================================================================================
+  log(total/(orders×AOV)): dải IQR [0.880, 1.136] (tính trên 03 sau A1)
+  22 bản ghi lệch ngoài dải -> AOV = total / orders (AOV theo định nghĩa là trung bình giá trị đơn)
+  Bản ghi trong dải (178): giữ nguyên - không sửa sai lệch nhỏ vì không phân biệt được với làm tròn/biến động thật
+  Đánh đổi: giả định total (tổng giao dịch) đáng tin hơn AOV; nếu total mới là ô nhiễu thì nhiễu chuyển sang AOV.
+  Với avg_session_minutes, discount_usage_rate: KHÔNG có quan hệ xác định để đối soát -> không sửa từng ô
+  (làm trơn/rời rạc hóa sẽ xóa cả tín hiệu thật; để Câu d dùng chuẩn hóa bền và thuật toán ít nhạy nhiễu).
+
+====================================================================================================
+A4. CHỌN CÁCH ĐIỀN THIẾU BẰNG KIỂM ĐỊNH CHÉO NỘI BỘ (chỉ dùng dữ liệu đã quan sát trong 03)
+====================================================================================================
+30 lần lặp, mỗi lần che 12% giá trị quan sát được của mỗi cột (income: che theo tỷ lệ thiếu MAR ước lượng từ 03 theo tuổi {0.0: 0.32, 1.0: 0.114, 2.0: 0.047})
+
+Sai số tuyệt đối trung bình chuẩn hóa theo IQR (NMAE, càng nhỏ càng tốt):
+method               median    knn  iterative
+column                                       
+age                   0.562  0.540      0.505
+tenure_months         0.523  0.368      0.449
+annual_income         1.068  0.690      0.792
+recency_days          0.742  0.671      0.635
+return_rate           0.623  0.530      0.542
+avg_session_minutes   0.498  0.226      0.297
+city_tier             0.336  0.362      0.326
+
+MAE trên thang gốc:
+method                median      knn  iterative
+column                                          
+age                    6.599    6.346      5.933
+tenure_months         12.022    8.461     10.335
+annual_income        228.084  147.420    169.180
+recency_days          53.433   48.341     45.742
+return_rate            0.083    0.071      0.072
+avg_session_minutes   18.940    8.607     11.292
+city_tier              0.671    0.724      0.652
+
+city_tier - độ chính xác: {'iterative': 0.352, 'knn': 0.342, 'median': 0.329}
+
+Cách được chọn cho từng cột (NMAE nhỏ nhất): {'age': 'iterative', 'tenure_months': 'knn', 'annual_income': 'knn', 'recency_days': 'iterative', 'return_rate': 'knn', 'avg_session_minutes': 'knn', 'city_tier': 'iterative'}
+
+So sánh cặp trên cùng mặt nạ (số lần cách được chọn tốt hơn):
+             column      chọn   thứ_hai thắng  chênh_NMAE so_với_median
+                age iterative       knn 24/30       0.035         22/30
+      tenure_months       knn iterative 27/30       0.081         29/30
+      annual_income       knn iterative 25/30       0.102         30/30
+       recency_days iterative       knn 21/30       0.036         27/30
+        return_rate       knn iterative 16/30       0.012         26/30
+avg_session_minutes       knn iterative 28/30       0.071         30/30
+          city_tier iterative    median 10/30       0.010         10/30
+Đọc: 'thắng' gần 15/30 = không phân biệt được với cách thứ hai; 'so_với_median' cho biết lợi ích so với cách đơn giản nhất.
+  city_tier: iterative chỉ tốt hơn median 10/30 lần -> không ổn định, dùng median (đơn giản hơn)
+Cách dùng cuối cùng: {'age': 'iterative', 'tenure_months': 'knn', 'annual_income': 'knn', 'recency_days': 'iterative', 'return_rate': 'knn', 'avg_session_minutes': 'knn', 'city_tier': 'median'}
+
+====================================================================================================
+A5. ĐIỀN GIÁ TRỊ THIẾU / LỖI
+====================================================================================================
+Số ô cần điền theo loại:
+                     missing  error  suspect
+age                        0      2        0
+tenure_months              0      1        0
+annual_income             31      0        0
+recency_days               0      1        0
+return_rate                0      1        0
+avg_session_minutes       16      0        1
+city_tier                 10      0        0
+
+====================================================================================================
+A6. LƯU KẾT QUẢ
+====================================================================================================
+data/04_preprocessed.csv: 200 bản ghi × 16 cột (thêm cờ annual_income_was_missing)
+data/04_change_log.csv: 87 ô thay đổi
+step_type   column             
+A1          avg_order_value         1
+            total_spend_12m         1
+A3          avg_order_value        22
+A5-error    age                     2
+            recency_days            1
+            return_rate             1
+            tenure_months           1
+A5-missing  annual_income          31
+            avg_session_minutes    16
+            city_tier              10
+A5-suspect  avg_session_minutes     1
+Vi phạm miền còn lại: {'age': 0, 'tenure': 0, 'AOV': 0, 'recency': 0, 'return': 0, 'discount': 0, 'ratio': 0}
+Khách số đơn cực đoan (orders > 50.5): 6 bản ghi; số ô thay đổi = 1 (chỉ được phép là ô thiếu được điền)
+
+====================================================================================================
+A7. HÌNH TRƯỚC / SAU
+====================================================================================================
+[hình] figures/c_errors_fixed.png
+[hình] figures/c_imputation_cv.png
+[hình] figures/c_income_imputation.png
+[hình] figures/c_aov_reconcile.png
+[hình] figures/c_distributions_before_after.png
+
+Xong preprocess.py. Chạy tiếp cau_c/evaluate.py để so với dữ liệu sạch.
