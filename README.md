@@ -1,6 +1,6 @@
 # DataMining_Midterm
 
-Đề thi giữa kỳ môn Phân tích và khai phá dữ liệu - bài toán phân cụm khách hàng sàn TMĐT.
+Đề thi giữa kỳ môn Phân tích và khai phá dữ liệu (UET, HK I 2026-2027) - bài toán phân cụm khách hàng sàn TMĐT.
 
 ## Tham số theo MSSV
 
@@ -43,6 +43,9 @@ Chạy lại sẽ sinh ra đúng các file trong `data/` (seed cố định = 24
 - Ngoại lai lỗi: tuổi 150 và 3, tenure âm, AOV âm, recency 9999, return_rate 1.8, 1440 phút/tuần, tổng chi tiêu sai đơn vị (×1000).
 - Ngoại lai hợp lệ: khách mua sỉ - số đơn 120-260, AOV ~3.5 triệu, các thuộc tính nhất quán nội tại.
 
-**Hạn chế:** thuộc tính gần như độc lập có điều kiện trong mỗi phân khúc; ranh giới phân khúc rõ hơn dữ liệu thực.
+- Các bước tác động loại trừ nhau: mỗi ô bị tác động tối đa 1 lần. Nhiễu chỉ áp lên 186 bản ghi không phải ngoại lai; giá trị thiếu chỉ xóa ô chưa bị nhiễu/ngoại lai. Nhờ vậy `injection_log.csv` khớp 1-1 với file 03.
+- Script tự kiểm tra trên file 03 đọc lại từ đĩa: (i) không ô nào bị tác động 2 lần, (ii) giá trị cuối khớp cột `new` của log, (iii) mọi ô ngoài log giống hệt dữ liệu sạch.
+
+**Hạn chế:** giá trị thiếu không bao giờ rơi vào ô nhiễu/ngoại lai, nên MCAR/MAR chỉ đúng trên tập ô đủ điều kiện; thuộc tính gần như độc lập có điều kiện trong mỗi phân khúc; ranh giới phân khúc rõ hơn dữ liệu thực.
 
 **Nguyên tắc:** file `01_clean_ground_truth.csv` và cột `true_segment` không được dùng để tiền xử lý; chỉ dùng để đánh giá (ARI, sai số imputation).

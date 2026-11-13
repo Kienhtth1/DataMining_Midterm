@@ -105,14 +105,20 @@ df["total_spend_12m"] = df["total_spend_12m"].astype(float)
 df["age"] = df["age"].astype(float)
 df["tenure_months"] = df["tenure_months"].astype(float)
 
-# ---------------------------------------------------------------- 2. Nhiễu ngẫu nhiên (Gaussian, 30% bản ghi/thuộc tính)
+# Nguyên tắc: mỗi ô chỉ bị tác động TỐI ĐA 1 lần (nhiễu / ngoại lai / thiếu loại trừ nhau)
+# để log khớp 1-1 với dữ liệu cuối. Chọn trước bản ghi ngoại lai, nhiễu chỉ áp lên bản ghi còn lại.
+out_rows = rng.choice(N, size=14, replace=False)
+err_rows, legit_rows = out_rows[:8], out_rows[8:]
+non_out = np.setdiff1d(np.arange(N), out_rows)
+
+# ---------------------------------------------------------------- 2. Nhiễu ngẫu nhiên (Gaussian, 60 bản ghi/thuộc tính, ngoài 14 bản ghi ngoại lai)
 NOISE = {  # thuộc tính: (độ lệch chuẩn nhiễu tương đối hay tuyệt đối, kiểu)
     "avg_order_value":     ("mult", 0.15),   # nhân (1 + N(0, 0.15))
     "avg_session_minutes": ("add", 6.0),     # cộng N(0, 6)
     "discount_usage_rate": ("add", 0.08),    # cộng N(0, 0.08), cắt [0,1]
 }
 for col, (kind, sd) in NOISE.items():
-    idx = rng.choice(N, size=int(0.30 * N), replace=False)
+    idx = rng.choice(non_out, size=int(0.30 * N), replace=False)
     for j in idx:
         old = df.at[j, col]
         if kind == "mult":
@@ -127,9 +133,7 @@ for col, (kind, sd) in NOISE.items():
         log.append(dict(row=j, customer_id=df.at[j, "customer_id"], column=col,
                         type="noise", old=old, new=new))
 
-# ---------------------------------------------------------------- 3. Ngoại lai (14 bản ghi, không trùng nhau)
-out_rows = rng.choice(N, size=14, replace=False)
-err_rows, legit_rows = out_rows[:8], out_rows[8:]
+# ---------------------------------------------------------------- 3. Ngoại lai (14 bản ghi đã chọn ở trên, không trùng nhau)
 
 ERROR_SPECS = [  # lỗi nhập liệu / lỗi hệ thống -> nên sửa hoặc coi là thiếu
     ("age", lambda v: 150.0),
@@ -167,14 +171,21 @@ for j in legit_rows:
 df.to_csv(f"{OUT}/02_noisy_outliers.csv", index=False)
 
 # ---------------------------------------------------------------- 4. Giá trị thiếu
+# Chỉ xóa những ô CHƯA bị nhiễu/ngoại lai (tránh xóa mất ô đã ghi log).
+# Hệ quả (ghi vào báo cáo): cơ chế MCAR/MAR áp trên tập ô đủ điều kiện, không phải toàn bộ 200 dòng.
+touched = set(zip(pd.DataFrame(log)["row"], pd.DataFrame(log)["column"]))
+def eligible(col):
+    return np.array([j for j in range(N) if (j, col) not in touched])
+
 # 4.1 annual_income - MAR: xác suất thiếu phụ thuộc age (khách trẻ ít khai thu nhập)
 age_c = clean["age"].values
 p_miss = np.where(age_c < 28, 0.35, np.where(age_c < 40, 0.12, 0.05))
-miss_income = np.where(rng.random(N) < p_miss)[0]
-# 4.2 avg_session_minutes - MCAR 8%
-miss_sess = rng.choice(N, size=int(0.08 * N), replace=False)
-# 4.3 city_tier - MCAR 5%
-miss_tier = rng.choice(N, size=int(0.05 * N), replace=False)
+el = eligible("annual_income")
+miss_income = el[rng.random(len(el)) < p_miss[el]]
+# 4.2 avg_session_minutes - MCAR 8% (16 ô)
+miss_sess = rng.choice(eligible("avg_session_minutes"), size=int(0.08 * N), replace=False)
+# 4.3 city_tier - MCAR 5% (10 ô)
+miss_tier = rng.choice(eligible("city_tier"), size=int(0.05 * N), replace=False)
 
 final = df.copy()
 final["city_tier"] = final["city_tier"].astype("Int64")
@@ -210,17 +221,43 @@ dd = [
 pd.DataFrame(dd, columns=["attribute", "group", "dtype", "description"]).to_csv(
     f"{OUT}/data_dictionary.csv", index=False)
 
-# ---------------------------------------------------------------- 6. Kiểm tra ràng buộc đề bài
-lg = pd.DataFrame(log)
-n_inputs = final.shape[1] - 1
-miss_cols = final.columns[final.isna().any()].tolist()
-noise_cols = lg.loc[lg.type == "noise", "column"].unique().tolist()
+# ---------------------------------------------------------------- 6. Kiểm tra ràng buộc đề bài TRÊN FILE CUỐI (đọc lại từ đĩa)
+lg = pd.read_csv(f"{OUT}/injection_log.csv")
+f03 = pd.read_csv(f"{OUT}/03_raw_final.csv")
+f01 = pd.read_csv(f"{OUT}/01_clean_ground_truth.csv")
+COLS = [c for c in f03.columns if c != "customer_id"]
+
+def same(a, b):
+    if pd.isna(a) or pd.isna(b):
+        return pd.isna(a) and pd.isna(b)
+    try:
+        return np.isclose(float(a), float(b))
+    except (TypeError, ValueError):
+        return str(a) == str(b)
+
+# (i) mỗi ô bị tác động đúng 1 lần
+assert not lg.duplicated(["row", "column"]).any(), "Có ô bị tác động nhiều lần"
+# (ii) giá trị trong file 03 khớp cột 'new' của log
+mismatch = [(r.row, r.column) for r in lg.itertuples() if not same(f03.at[r.row, r.column], r.new)]
+assert not mismatch, f"Log không khớp file 03: {mismatch}"
+# (iii) mọi ô KHÔNG có trong log phải giống hệt dữ liệu sạch
+logged = set(zip(lg.row, lg.column))
+untouched_diff = [(j, c) for j in range(N) for c in COLS
+                  if (j, c) not in logged and not same(f03.at[j, c], f01.at[j, c])]
+assert not untouched_diff, f"Ô thay đổi ngoài log: {untouched_diff[:5]}"
+
+n_inputs = len(COLS)
+miss_cols = f03.columns[f03.isna().any()].tolist()
+noise_cols = [c for c in lg.loc[lg.type == "noise", "column"].unique()
+              if pd.api.types.is_numeric_dtype(f03[c])]
 n_out = lg.loc[lg.type.str.startswith("outlier"), "row"].nunique()
-print(f"N = {len(final)}  (yêu cầu 200)")
+print(f"N = {len(f03)}  (yêu cầu 200)")
 print(f"Thuộc tính đầu vào = {n_inputs}  (yêu cầu >= 10)")
 print(f"Thuộc tính có thiếu = {miss_cols}  (yêu cầu >= 2)")
-print(f"Thuộc tính số có nhiễu = {noise_cols}  (yêu cầu >= 2)")
-print(f"Bản ghi ngoại lai = {n_out}  (yêu cầu >= 11)")
-print("Số ô thiếu:", final.isna().sum()[final.isna().sum() > 0].to_dict())
-print("Phân khúc:", clean.true_segment.value_counts().to_dict())
-assert len(final) == 200 and n_inputs >= 10 and len(miss_cols) >= 2 and len(noise_cols) >= 2 and n_out >= 11
+print(f"Thuộc tính số có nhiễu (còn trong file 03) = {noise_cols}  (yêu cầu >= 2)")
+print(f"Bản ghi ngoại lai (còn trong file 03) = {n_out}  (yêu cầu >= 11)")
+print("Số ô thiếu:", f03.isna().sum()[f03.isna().sum() > 0].to_dict())
+print("Số ô theo loại:", lg.type.value_counts().to_dict())
+print("Phân khúc:", f01.true_segment.value_counts().to_dict())
+assert len(f03) == 200 and n_inputs >= 10 and len(miss_cols) >= 2 and len(noise_cols) >= 2 and n_out >= 11
+print("OK - log khớp 1-1 với file 03, mọi ràng buộc đạt.")
